@@ -2,9 +2,12 @@
 #include <angles/angles.h>
 #include <algorithm>
 
-RSL400Interface::RSL400Interface(std::string address, std::string port):
-  HardwareInterface(address, port, this), Node("leuze_driver")
+RSL400Interface::RSL400Interface(): Node("leuze_driver")
 {
+
+  std::string address("192.168.10.1");
+  std::string port("9990");
+  
   //-135/135 0.1
   pub_scan_ = this->create_publisher<LaserScan>("scan", 50);
   pub_status_ = this->create_publisher<ExtendedStatusProfileMsg>("status", 50);

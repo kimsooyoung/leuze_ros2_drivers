@@ -13,15 +13,20 @@ using LaserScan = sensor_msgs::msg::LaserScan;
 using ExtendedStatusProfileMsg = leuze_msgs::msg::ExtendedStatusProfileMsg;
 using String = std_msgs::msg::String;
 
-class RSL400Interface : public HardwareInterface<UDPConnection>, DataParser, rclcpp::Node
+class RSL400Interface : public rclcpp::Node
 {
 public:
-  RSL400Interface(std::string address, std::string port);
+  RSL400Interface();
   ~RSL400Interface();
 
-  void connect();
-  void disconnect();
-  int parseBuffer(std::basic_string<unsigned char> buffer);
+  // // HardwareInterface
+  // 이건 has-a 로 해결 가능
+  // void connect();
+  // void disconnect();
+  
+  // // DataParser
+  // 이게 문제다. :/
+  // int parseBuffer(std::basic_string<unsigned char> buffer);
 
 protected:
   void resetDefault();
@@ -34,6 +39,9 @@ protected:
   bool compareTwoFloats(float a, float b,float epsilon = 0.0001);
 
 private:
+  DataParser parser_;
+  HardwareInterface<UDPConnection> hw_interface_;
+
   rclcpp::Publisher<LaserScan>::SharedPtr pub_scan_;
   rclcpp::Publisher<ExtendedStatusProfileMsg>::SharedPtr pub_status_;
   rclcpp::Publisher<String>::SharedPtr pub_debug_;
