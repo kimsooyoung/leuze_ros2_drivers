@@ -13,10 +13,10 @@ using LaserScan = sensor_msgs::msg::LaserScan;
 using ExtendedStatusProfileMsg = leuze_msgs::msg::ExtendedStatusProfileMsg;
 using String = std_msgs::msg::String;
 
-class RSL400Interface : public HardwareInterface<UDPConnection>, DataParser
+class RSL400Interface : public HardwareInterface<UDPConnection>, DataParser, rclcpp::Node
 {
 public:
-  RSL400Interface(std::string address, std::string port, ros::NodeHandle* nh);
+  RSL400Interface(std::string address, std::string port);
   ~RSL400Interface();
 
   void connect();
@@ -34,7 +34,6 @@ protected:
   bool compareTwoFloats(float a, float b,float epsilon = 0.0001);
 
 private:
-  ros::NodeHandle nh_;
   rclcpp::Publisher<LaserScan>::SharedPtr pub_scan_;
   rclcpp::Publisher<ExtendedStatusProfileMsg>::SharedPtr pub_status_;
   rclcpp::Publisher<String>::SharedPtr pub_debug_;
@@ -51,7 +50,7 @@ private:
   int measure_counter_;
   int block_counter_;
   int scan_size_;
-  
+
   std::vector<DatagramMeasurementDataType> scan_data_;
 
   void LogBufferToDebug(std::basic_string<unsigned char> buffer);

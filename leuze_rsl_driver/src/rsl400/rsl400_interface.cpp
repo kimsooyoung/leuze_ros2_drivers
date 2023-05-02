@@ -1,10 +1,9 @@
 #include "leuze_rsl_driver/rsl400_interface.hpp"
 #include <angles/angles.h>
 #include <algorithm>
-#include <ros/console.h>
 
 RSL400Interface::RSL400Interface(std::string address, std::string port):
-  HardwareInterface(address, port, this)
+  HardwareInterface(address, port, this), Node("leuze_driver")
 {
   //-135/135 0.1
   pub_scan_ = this->create_publisher<LaserScan>("scan", 50);
@@ -15,32 +14,14 @@ RSL400Interface::RSL400Interface(std::string address, std::string port):
 
   this->declare_parameter("scan_frame", "world");
   this->declare_parameter("ls_debug", "false");
-  this->declare_parameter("angle_min", -2.35619449);
-  this->declare_parameter("angle_max", 2.35619449);
-  this->declare_parameter("scan_time", 0.04);
-  this->declare_parameter("range_min", 0.001);
-  this->declare_parameter("range_max", 65.0);
 
   auto scan_frame = this->get_parameter("scan_frame").as_string();
   auto ls_debug = this->get_parameter("ls_debug").as_string() == "true" ? true : false;
   
-  auto angle_min = this->get_parameter("angle_min").as_double();
-  auto angle_max = this->get_parameter("angle_max").as_double();
-  auto scan_time = this->get_parameter("scan_time").as_double();
-  auto range_min = this->get_parameter("range_min").as_double();
-  auto range_max = this->get_parameter("range_max").as_double();
-
   RCLCPP_INFO(get_logger(), "scan_frame: %s", scan_frame.c_str());
-  RCLCPP_INFO(get_logger(), "ls_debug: %s", ls_debug.c_str());
+  RCLCPP_INFO(get_logger(), "ls_debug: %s", ls_debug == true ? "true" : "false");
 
-  RCLCPP_INFO(get_logger(), "angle_min: %f", angle_min);
-  RCLCPP_INFO(get_logger(), "angle_max: %f", angle_max);
-  RCLCPP_INFO(get_logger(), "scan_time: %f", scan_time);
-  RCLCPP_INFO(get_logger(), "range_min: %f", range_min);
-  RCLCPP_INFO(get_logger(), "range_max: %f", range_max);
-
-
-  header_frame_ = str_param.as_string();
+  header_frame_ = scan_frame;
 
   // if(!private_nh_.getParam("scan_frame",header_frame_)){
   //   ROS_WARN_STREAM("[Laser Scanner] scan_frame param not found, loading default value of \"world\"");
@@ -71,85 +52,84 @@ RSL400Interface::~RSL400Interface()
 void RSL400Interface::connect()
 {
   HardwareInterface<UDPConnection>::connect();
-  ROS_INFO_STREAM("[Laser Scanner] Listening to data");
+  RCLCPP_INFO_STREAM(get_logger(), "[Laser Scanner] Listening to data");
 }
 
 
 void RSL400Interface::resetDefault()
 {
+  this->declare_parameter("angle_min", -2.35619449);
+  this->declare_parameter("angle_max", 2.35619449);
+  this->declare_parameter("scan_time", 0.04);
+  this->declare_parameter("range_min", 0.001);
+  this->declare_parameter("range_max", 65.0);
+
+  auto angle_min = this->get_parameter("angle_min").as_double();
+  auto angle_max = this->get_parameter("angle_max").as_double();
+  auto scan_time = this->get_parameter("scan_time").as_double();
+  auto range_min = this->get_parameter("range_min").as_double();
+  auto range_max = this->get_parameter("range_max").as_double();
+
+  RCLCPP_INFO(get_logger(), "angle_min: %f", angle_min);
+  RCLCPP_INFO(get_logger(), "angle_max: %f", angle_max);
+  RCLCPP_INFO(get_logger(), "scan_time: %f", scan_time);
+  RCLCPP_INFO(get_logger(), "range_min: %f", range_min);
+  RCLCPP_INFO(get_logger(), "range_max: %f", range_max);
+
   laser_scan_.header.frame_id = header_frame_;
-  laser_scan_.angle_min = nh_.param("/angle_min",-2.35619449); //Default min value
-  laser_scan_.angle_max = nh_.param("/angle_max",2.35619449); //Default min value
-  laser_scan_.angle_increment = (laser_scan_.angle_max-laser_scan_.angle_min)/(float)scan_size_; //default max resolution
-  laser_scan_.scan_time = nh_.param("/scan_time",0.04); // Default
-  laser_scan_.range_min = nh_.param("/range_min",0.001); //default
-  laser_scan_.range_max = nh_.param("/range_max",65.0);  //Max range 65m
+  laser_scan_.angle_min = range_max; //Default min value
+  laser_scan_.angle_max = angle_max; //Default min value
+  laser_scan_.angle_increment = (laser_scan_.angle_max - laser_scan_.angle_min)/(float)scan_size_; //default max resolution
+  laser_scan_.scan_time = scan_time; // Default
+  laser_scan_.range_min = range_min; //default
+  laser_scan_.range_max = range_max;  //Max range 65m
+
   laser_scan_.ranges.resize(0);
   laser_scan_.ranges.resize(scan_size_);
+
   laser_scan_.intensities.resize(0);
   laser_scan_.intensities.resize(scan_size_);
+  
   block_counter_ = 0;
   measure_counter_ = 0;
   scan_number_ = -1; // Get last scan number
-  ROS_INFO_STREAM("[Laser Scanner] Reset data");
+  
+  RCLCPP_INFO_STREAM(get_logger(), "[Laser Scanner] Reset data");
 }
 
-void RSL400Interface::disconnect()
-{
+void RSL400Interface::disconnect(){
   HardwareInterface<UDPConnection>::disconnect();
-  ROS_INFO_STREAM("[Laser Scanner] RSL Disconnected");
+  RCLCPP_INFO_STREAM(get_logger(), "[Laser Scanner] RSL Disconnected");
 }
 
-int RSL400Interface::parseBuffer(std::basic_string<unsigned char> buffer)
-{
+int RSL400Interface::parseBuffer(std::basic_string<unsigned char> buffer){
   if(debug_on)
-  {
     LogBufferToDebug(buffer);
-  }
-  Frame *frame = reinterpret_cast<Frame *>((char *)buffer.c_str());
-  if(frame->id==1)
-    // Extended status profile. Status profile + measurement contour descritpion. Pg8 3.3.1.
-  {
-    parseExtendedStatusProfile(buffer);
-  }
-  else if(frame->id==3 or frame->id==6)
-  {
-    if(configuration_received_ == false)
-    {
-       ROS_WARN_STREAM("[Laser Scanner] Scan data header not received, skipping measurement.");
-    }
-    else
-    {
-      if(frame->scan_number != scan_number_)
-      {
-        ROS_WARN_STREAM("[Laser Scanner] Unexpected Scan Data id, skipping measurement.");
-      }
-      else
-      {
-        scan_data_[frame->block] = parseScanData(buffer, frame);
-      }
-    }
 
+  Frame *frame = reinterpret_cast<Frame *>((char *)buffer.c_str());
+
+  if(frame->id==1) // Extended status profile. Status profile + measurement contour descritpion. Pg8 3.3.1.
+    parseExtendedStatusProfile(buffer);
+  else if(frame->id==3 or frame->id==6){
+    if(configuration_received_ == false)
+      RCLCPP_INFO(get_logger(), "[Laser Scanner] Scan data header not received, skipping measurement.");
+    else
+      if(frame->scan_number != scan_number_)
+        RCLCPP_INFO(get_logger(), "[Laser Scanner] Unexpected Scan Data id, skipping measurement.");
+      else
+        scan_data_[frame->block] = parseScanData(buffer, frame);
   }
   else if(frame->id==0)
-  {
     return frame->id;
-  }
-  else
-  {
-    ROS_ERROR_STREAM("[Laser Scanner] Unknown ID : " << frame->id);
+  else{
+    RCLCPP_INFO(get_logger(), "[Laser Scanner] Unknown ID : %d", frame->id);
     return -1;
   }
   if(measure_counter_ == scan_size_)
-  {
     if(checkScan())
-    {
       publishScan();
-    }
-  }
-  if(measure_counter_ >= scan_size_)
-  {
-    ROS_WARN_STREAM("[Laser Scanner] Scan measure counter overflowed, resetting");
+  if(measure_counter_ >= scan_size_){
+    RCLCPP_WARN(get_logger(), "[Laser Scanner] Scan measure counter overflowed, resetting");
     configuration_received_ = false;
     resetDefault();
   }
@@ -161,15 +141,14 @@ DatagramExtendedStatusProfile RSL400Interface::parseExtendedStatusProfile(std::b
 {
   DatagramExtendedStatusProfile *esp = reinterpret_cast<DatagramExtendedStatusProfile *>((char *)buffer.c_str());
 
-  if(buffer.length() != esp->frame.h1.total_length)
-  {
-    ROS_ERROR_STREAM("[Laser Scanner] Parsing Extended Status Profile of incorrect length " << buffer.length() << ", expected " << esp->frame.h1.total_length);
+  if(buffer.length() != esp->frame.h1.total_length){
+    RCLCPP_ERROR_STREAM(get_logger(), "[Laser Scanner] Parsing Extended Status Profile of incorrect length " << buffer.length() << ", expected " << esp->frame.h1.total_length);
     return *esp;
   }
   verifyConfiguration(*esp);
 
   status_msg_.header.frame_id = header_frame_;
-  status_msg_.header.stamp = ros::Time::now();
+  status_msg_.header.stamp = this->get_clock()->now();
 
   status_msg_.byte_0 = esp->status_profile.byte_0;
   status_msg_.byte_1 = esp->status_profile.byte_1;
@@ -226,7 +205,7 @@ DatagramMeasurementDataType RSL400Interface::parseScanData(std::basic_string<uns
   // Buffer length should match length declared by header
   if(mdt.frame->h1.total_length!=buffer.length())
   {
-    ROS_ERROR_STREAM("[Laser Scanner] Parsing Scan data message of incorrect length " << buffer.length() << ", expected " << mdt.frame->h1.total_length);
+    RCLCPP_ERROR_STREAM(get_logger(), "[Laser Scanner] Parsing Scan data message of incorrect length " << buffer.length() << ", expected " << mdt.frame->h1.total_length);
     return mdt;
   }
   // Number of distance/signal values is equal to data length in bytes/4 (because 4 bytes per value)
@@ -234,12 +213,12 @@ DatagramMeasurementDataType RSL400Interface::parseScanData(std::basic_string<uns
   // Refer UDP specs pg 14 3.3.2.2. This gives number of "measurement data values"/"scan values".
   if(mdt.data_distance.size() != length)
   {
-    ROS_ERROR_STREAM("[Laser Scanner] Parsing Scan data message of incorrect number of data values " << mdt.data_distance.size() << ", expected " << length);
+    RCLCPP_ERROR_STREAM(get_logger(), "[Laser Scanner] Parsing Scan data message of incorrect number of data values " << mdt.data_distance.size() << ", expected " << length);
     return mdt;
   }
   if(mdt.data_signal_strength.size() != length)
   {
-    ROS_ERROR_STREAM("[Laser Scanner] Parsing Scan data message of incorrect number of signal strength values " << mdt.data_signal_strength.size() << ", expected " << length);
+    RCLCPP_ERROR_STREAM(get_logger(), "[Laser Scanner] Parsing Scan data message of incorrect number of signal strength values " << mdt.data_signal_strength.size() << ", expected " << length);
     return mdt;
   }
 
@@ -263,33 +242,30 @@ bool RSL400Interface::checkScan()
 {
   int i_measure = 0;
   //Assemble data from block;
-  for(int i_block=0; i_block < block_counter_; i_block++)
-  {
-    if(scan_data_[i_block].data_distance.size()==0)
-    {
-      ROS_INFO_STREAM("[Laser Scanner] Received scan data datagram with no distance values");
+  for(int i_block=0; i_block < block_counter_; i_block++){
+    if(scan_data_[i_block].data_distance.size()==0){
+      RCLCPP_INFO(get_logger(), "[Laser Scanner] Received scan data datagram with no distance values");
       return false;
     }
-    else
-    {
-      for(int i_scan=0; i_scan< scan_data_[i_block].data_distance.size(); i_scan++)
-      {
+    else{
+      for(int i_scan=0; i_scan< scan_data_[i_block].data_distance.size(); i_scan++){
         laser_scan_.ranges[i_measure] = (float)scan_data_[i_block].data_distance[i_scan]/1000.0;
         laser_scan_.intensities[i_measure] = (float)scan_data_[i_block].data_signal_strength[i_scan];
         i_measure++;
       }
     }
   }
-  laser_scan_.header.stamp = ros::Time::now();
+
+  laser_scan_.header.stamp = this->get_clock()->now();
   // Reverse the scans to match real world
   std::reverse(laser_scan_.ranges.begin(), laser_scan_.ranges.end());
   std::reverse(laser_scan_.intensities.begin(), laser_scan_.intensities.end());
   return true;
 }
-void RSL400Interface::publishScan()
-{
-  pub_scan_.publish(laser_scan_);
-  pub_status_.publish(status_msg_);
+
+void RSL400Interface::publishScan(){
+  pub_scan_->publish(laser_scan_);
+  pub_status_->publish(status_msg_);
   measure_counter_ =0;
 }
 
@@ -298,44 +274,38 @@ void RSL400Interface::verifyConfiguration(DatagramExtendedStatusProfile d_esp)
   float min_angle_from_esp = ((float)(d_esp.measurement_contour_descritption.start_index)/10);
   //+1 here to account for the fact that internal calculations are for example from -135° to +135° but actual represntation is from 0° to 269.9° (difference of 0.1°)
   float max_angle_from_esp = ((float)(d_esp.measurement_contour_descritption.stop_index + 1)/10);
-  float avg_angle = (min_angle_from_esp+max_angle_from_esp)/2;
+  float avg_angle = (min_angle_from_esp + max_angle_from_esp) / 2;
 
   // Adjust for example from -135° to +135° to 0° to 270°
   min_angle_from_esp =  angles::from_degrees(min_angle_from_esp - avg_angle);
   max_angle_from_esp =  angles::from_degrees(max_angle_from_esp - avg_angle);
 
-  if(!compareTwoFloats(min_angle_from_esp, laser_scan_.angle_min))
-  {
-    ROS_WARN_STREAM("[Laser Scanner] Current internal minimum angle of " << laser_scan_.angle_min << " does not match the value received from the laser " << min_angle_from_esp << ". Adjusting internally");
+  if(!compareTwoFloats(min_angle_from_esp, laser_scan_.angle_min)){
+    RCLCPP_WARN(get_logger(), "[Laser Scanner] Current internal minimum angle of %f does not match the value received from the laser %f. Adjusting internally", laser_scan_.angle_min, min_angle_from_esp);
     laser_scan_.angle_min = min_angle_from_esp;
   }
-
-  if(!compareTwoFloats(max_angle_from_esp,laser_scan_.angle_max))
-  {
-    ROS_WARN_STREAM("[Laser Scanner] Current internal maximum angle of " << laser_scan_.angle_max << " does not match the value received from the laser " << max_angle_from_esp << ". Adjusting internally");
+  if(!compareTwoFloats(max_angle_from_esp,laser_scan_.angle_max)){
+    RCLCPP_WARN(get_logger(), "[Laser Scanner] Current internal maximum angle of %f does not match the value received from the laser %f. Adjusting internally", laser_scan_.angle_max, max_angle_from_esp);
     laser_scan_.angle_max = max_angle_from_esp;
   }
 
-  if(scan_size_!=d_esp.getBeamCount())
-  {
-    ROS_WARN_STREAM("[Laser Scanner] Current internal beam count of " << scan_size_ << " does not match the value received from the laser " << d_esp.getBeamCount() << ". Adjusting internally");
+  if(scan_size_!=d_esp.getBeamCount()){
+    RCLCPP_WARN(get_logger(), "[Laser Scanner] Current internal beam count of %d does not match the value received from the laser %d. Adjusting internally", scan_size_, d_esp.getBeamCount());
     scan_size_ = d_esp.getBeamCount();
   }
-  if(measure_counter_ != 0)
-  {
-    ROS_WARN_STREAM("[Laser Scanner] Received ExtendedProfile at unexcepted timing.");
+  if(measure_counter_ != 0){
+    RCLCPP_WARN(get_logger(), "[Laser Scanner] Received ExtendedProfile at unexcepted timing.");
     measure_counter_ =0;
   }
+
   scan_data_.clear();
   scan_data_.resize(scan_size_);
   scan_number_ = d_esp.frame.scan_number;
   configuration_received_ = true;
+  
   // Length 48 is fixed
   if(d_esp.frame.h1.total_length!=48)
-  {
-    ROS_ERROR_STREAM("[Laser Scanner] Parsing Extended Status Profile of incorrect length " << d_esp.frame.h1.total_length << ", expected " << 48);
-  }
-
+    RCLCPP_WARN(get_logger(), "[Laser Scanner] Parsing Extended Status Profile of incorrect length %d, expected 48", d_esp.frame.h1.total_length);
 }
 
 void RSL400Interface::LogBufferToDebug(std::basic_string<unsigned char> buffer)
@@ -343,10 +313,9 @@ void RSL400Interface::LogBufferToDebug(std::basic_string<unsigned char> buffer)
   std::stringstream oss;
   oss << std::hex;
   for(int i=0; i<buffer.length(); i++)
-  {
     oss << std::setw(2) << std::setfill('0') << (int)(u_int16_t)buffer[i];
-  }
-  std_msgs::String string_msg;
+
+  String string_msg;
   string_msg.data = oss.str();
-  pub_debug_.publish(string_msg);
+  pub_debug_->publish(string_msg);
 }
