@@ -22,7 +22,8 @@
 int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
 
-  std::shared_ptr<rclcpp::Node> node = std::make_shared<RSL400Interface>("192.168.10.1", "9990");
+  std::shared_ptr<rclcpp::Node> node{new RSL400Interface("192.168.10.1", "9990")};
+  // std::shared_ptr<rclcpp::Node> node = std::make_shared<RSL400Interface>("192.168.10.1", "9990");
   // rclcpp::SharedPtr node = std::make_shared<RSL400Interface>("192.168.10.1", "9990");
   rclcpp::spin(node);
 
