@@ -1,5 +1,5 @@
 # The header
-Header header
+std_msgs/Header header
 
 # The Status Profile part of the message
 # Refer UDP specification pg 19 Table 3.3
@@ -21,7 +21,7 @@ uint8 fp_sel_b_byte_17
 uint8 fp_sel_b_byte_18
 uint8 indic_b_19
 
-#The Measurement Contour Description part of the message
+# The Measurement Contour Description part of the message
 # Refer UDP specification pg 13 Table 3.4
 uint16 start_index
 uint16 stop_index

@@ -1,4 +1,4 @@
-Header header
+std_msgs/Header header
 bool o_0_RES1
 bool o_1_F1
 bool o_2_F2

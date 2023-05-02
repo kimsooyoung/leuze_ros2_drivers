@@ -37,9 +37,9 @@ endif()
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/ExtendedStatusProfileMsg.msg"
-  "msg/PhidgetIKInputMsg.msg"
-  "msg/PhidgetIKOutputMsg.msg"
-  # std_msgs/msg/Header
+  # "msg/PhidgetIKInputMsg.msg"
+  # "msg/PhidgetIKOutputMsg.msg"
+  DEPENDENCIES std_msgs
 )
 
 ament_package()
