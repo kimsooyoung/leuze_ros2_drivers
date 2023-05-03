@@ -16,7 +16,7 @@ using String = std_msgs::msg::String;
 class RSL400Interface : public rclcpp::Node, HardwareInterface<UDPConnection>, DataParser
 {
 public:
-  RSL400Interface(std::string address, std::string port);
+  RSL400Interface();
   ~RSL400Interface();
 
   // void connect();
@@ -34,6 +34,9 @@ protected:
   // bool compareTwoFloats(float a, float b,float epsilon = 0.0001);
 
 private:
+  DataParser parser_;
+  HardwareInterface<UDPConnection> hw_interface_;
+
   rclcpp::Publisher<LaserScan>::SharedPtr pub_scan_;
   rclcpp::Publisher<ExtendedStatusProfileMsg>::SharedPtr pub_status_;
   rclcpp::Publisher<String>::SharedPtr pub_debug_;
