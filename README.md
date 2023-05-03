@@ -1,17 +1,23 @@
-# Leuze ROS drivers
+# Leuze ROS 2 drivers
 
-This stack contains all packages of the ROS driver for the Leuze RSL 400 laser scanners.   
+This stack contains all packages of the ROS 2 driver for the Leuze RSL 400 laser scanners.   
 
 ## Installation (from source)
 
 Go to your catkin workspace:
 ```
-cd ~catkin_ws/src/   
-git clone https://gitlab.cc-asp.fraunhofer.de/ipa326/leuze_ros_drivers.git   
-cd ..   
-rosdep install --from-paths src --ignore-src -r -y   
-catkin build    
-source ~catkin_ws/devel/setup.bash   
+cd ~ros2_ws/src/   
+git clone https://github.com/kimsooyoung/leuze_ros2_drivers.git
+cd ..
+
+colcon build --symlink-install --packages-select leuze_msgs
+source install/local_setup.bash
+
+colcon build --symlink-install --packages-select leuze_rsl_driver
+source install/local_setup.bash
+
+colcon build --symlink-install --packages-select leuze_bringup
+source install/local_setup.bash
 ```
 
 ## Installation (from deb -- (Not Available yet) --)
@@ -89,5 +95,5 @@ roslaunch leuze_bringup leuze_bringup.launch sensor_ip:=<sensor ip> port:=<port>
 
 You can then view the scan profile by running :   
 ```
-roslaunch leuze_urdf view_rsl400.launch
+ros2 launch leuze_bringup leuze_bringup.launch.py
 ```   
