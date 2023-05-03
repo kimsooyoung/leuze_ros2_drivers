@@ -16,7 +16,9 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 # find dependencies
-find_package(Boost REQUIRED)
+# find_package(Boost REQUIRED)
+find_package(Boost COMPONENTS thread REQUIRED)
+
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
@@ -39,24 +41,38 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-include_directories(include)
+include_directories(include
+  ${Boost_INCLUDES}
+)
+
+add_executable(leuze_rsl_driver 
+  src/leuze_rsl_driver.cpp
+  # src/rsl400/rsl400_interface.cpp
+)
+ament_target_dependencies(leuze_rsl_driver 
+  rclcpp 
+  sensor_msgs
+  leuze_msgs
+  angles
+)
+target_link_libraries(leuze_rsl_driver
+  Boost::thread
+)
+
 
 add_executable(
-  leuze_rsl_driver 
-  src/leuze_rsl_driver.cpp
-  src/rsl400/rsl400_interface.cpp
+  node_inheritance 
+  src/node_inheritance.cpp
 )
 ament_target_dependencies(
-  leuze_rsl_driver 
+  node_inheritance 
    rclcpp 
-   sensor_msgs
-   leuze_msgs
-   angles
 )
 
 install(
   TARGETS
     leuze_rsl_driver
+    node_inheritance
   DESTINATION 
     lib/${PROJECT_NAME}
 )
