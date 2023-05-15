@@ -23,8 +23,8 @@
 int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
 
-  std::string address("192.168.10.1");
-  std::string port("9990");
+  std::string address("192.168.100.1");
+  std::string port("9999");
 
   // std::shared_ptr<rclcpp::Node> node{new RSL400Interface(address, port)};
   // std::shared_ptr<rclcpp::Node> node = std::make_shared<RSL400Interface>("192.168.10.1", "9990");

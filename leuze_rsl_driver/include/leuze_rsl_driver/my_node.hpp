@@ -64,11 +64,6 @@ public:
     RCLCPP_INFO_STREAM(get_logger(), "[Laser Scanner] Listening to data");
   }
 
-  void disconnect(){
-    HardwareInterface<UDPConnection>::disconnect();
-    RCLCPP_INFO_STREAM(get_logger(), "[Laser Scanner] RSL Disconnected");
-  }
-
   void resetDefault(){
     this->declare_parameter("angle_min", -2.35619449);
     this->declare_parameter("angle_max", 2.35619449);
@@ -107,6 +102,11 @@ public:
     scan_number_ = -1; // Get last scan number
     
     RCLCPP_INFO_STREAM(get_logger(), "[Laser Scanner] Reset data");
+  }
+
+  void disconnect(){
+    HardwareInterface<UDPConnection>::disconnect();
+    RCLCPP_INFO_STREAM(get_logger(), "[Laser Scanner] RSL Disconnected");
   }
 
   // pure virtual function
