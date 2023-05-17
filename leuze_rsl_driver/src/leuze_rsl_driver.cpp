@@ -1,6 +1,8 @@
 #include "rclcpp/rclcpp.hpp"
-// #include "leuze_rsl_driver/rsl400_interface.hpp"
-#include "leuze_rsl_driver/my_node.hpp"
+
+// CAUTION 
+// currently, this project is written by header only 
+#include "leuze_rsl_driver/rsl400_interface.hpp"
 
 int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
