@@ -69,8 +69,12 @@ ament_target_dependencies(
    rclcpp 
 )
 
+add_executable(laser_test src/laserscan_test.cpp)
+ament_target_dependencies(laser_test rclcpp sensor_msgs)
+
 install(
   TARGETS
+    laser_test
     leuze_rsl_driver
     node_inheritance
   DESTINATION 

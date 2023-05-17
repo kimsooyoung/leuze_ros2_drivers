@@ -84,7 +84,7 @@ public:
     RCLCPP_INFO(get_logger(), "range_max: %f", range_max);
 
     laser_scan_.header.frame_id = header_frame_;
-    laser_scan_.angle_min = range_max; //Default min value
+    laser_scan_.angle_min = angle_min; //Default min value
     laser_scan_.angle_max = angle_max; //Default min value
     laser_scan_.angle_increment = (laser_scan_.angle_max - laser_scan_.angle_min)/(float)scan_size_; //default max resolution
     laser_scan_.scan_time = scan_time; // Default
@@ -93,7 +93,6 @@ public:
 
     laser_scan_.ranges.resize(0);
     laser_scan_.ranges.resize(scan_size_);
-
     laser_scan_.intensities.resize(0);
     laser_scan_.intensities.resize(scan_size_);
     
@@ -254,9 +253,11 @@ public:
       else{
         for(int i_scan=0; i_scan< scan_data_[i_block].data_distance.size(); i_scan++){
           laser_scan_.ranges[i_measure] = (float)scan_data_[i_block].data_distance[i_scan]/1000.0;
+          // std::cout << laser_scan_.ranges.size() << " ";
           laser_scan_.intensities[i_measure] = (float)scan_data_[i_block].data_signal_strength[i_scan];
           i_measure++;
         }
+        // std::cout << std::endl;
       }
     }
 
@@ -311,7 +312,6 @@ public:
     if(d_esp.frame.h1.total_length!=48)
       RCLCPP_WARN(get_logger(), "[Laser Scanner] Parsing Extended Status Profile of incorrect length %d, expected 48", d_esp.frame.h1.total_length);
   }
-
 
 private:
   rclcpp::Publisher<LaserScan>::SharedPtr pub_scan_;
