@@ -34,7 +34,7 @@ public:
 
     auto scan_frame = this->get_parameter("scan_frame").as_string();
     auto ls_debug = this->get_parameter("ls_debug").as_string() == "true" ? true : false;
-    
+
     RCLCPP_INFO(get_logger(), "scan_frame: %s", scan_frame.c_str());
     RCLCPP_INFO(get_logger(), "ls_debug: %s", ls_debug == true ? "true" : "false");
 

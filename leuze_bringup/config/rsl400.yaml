@@ -1,0 +1,10 @@
+leuze_driver:
+  ros__parameters:
+    scan_frame: "scanner_laser"
+    int_param: 5
+    scan_size: 2700
+    angle_min: -2.35619449
+    angle_max: 2.35619449
+    scan_time: 0.04
+    range_min: 0.001
+    range_max: 65.0

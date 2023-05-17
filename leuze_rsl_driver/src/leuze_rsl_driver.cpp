@@ -5,14 +5,17 @@
 int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
 
-  // TODO: into node param
-  std::string address("192.168.10.1");
-  std::string port("9990");
+  if (argc < 3)
+  {
+      std::cerr << "Not enough arguments!" << std::endl;
+  }
+  std::string address = argv[1];
+  std::string port = argv[2];
 
-  // std::shared_ptr<rclcpp::Node> node{new RSL400Interface(address, port)};
-  // std::shared_ptr<rclcpp::Node> node = std::make_shared<RSL400Interface>("192.168.10.1", "9990");
-  // std::shared_ptr<rclcpp::Node> node = std::make_shared<RSL400Interface>(address, port);
-  // auto node = std::make_shared<RSL400Interface>(address, port);
+  std::cout << "address: " << address << std::endl;
+  std::cout << "port: " << port << std::endl;
+
+  // TODO: header seperation
   auto node = std::make_shared<MyNode>(address, port);
   node->connect();
   
