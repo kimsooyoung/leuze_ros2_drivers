@@ -3,6 +3,7 @@
 
 #include <angles/angles.h>
 #include <algorithm>
+#include <limits>
 
 #include "rclcpp/rclcpp.hpp"
 #include "leuze_rsl_driver/communication.hpp"
@@ -92,9 +93,11 @@ public:
     laser_scan_.range_max = range_max;  //Max range 65m
 
     laser_scan_.ranges.resize(0);
-    laser_scan_.ranges.resize(scan_size_);
+    // laser_scan_.ranges.resize(scan_size_);
+    laser_scan_.ranges.resize(scan_size_ + 1);
     laser_scan_.intensities.resize(0);
-    laser_scan_.intensities.resize(scan_size_);
+    // laser_scan_.intensities.resize(scan_size_);
+    laser_scan_.intensities.resize(scan_size_ + 1);
     
     block_counter_ = 0;
     measure_counter_ = 0;
@@ -257,6 +260,7 @@ public:
           laser_scan_.intensities[i_measure] = (float)scan_data_[i_block].data_signal_strength[i_scan];
           i_measure++;
         }
+        laser_scan_.ranges[scan_size_] = std::numeric_limits<double>::infinity();
         // std::cout << std::endl;
       }
     }
